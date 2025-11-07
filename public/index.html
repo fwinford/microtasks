@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+    Micro-Deadlines Frontend
+    Interactive UI for assignment and task management with AI integration
+    
+    External APIs & Technologies:
+    - Fetch API: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+    - HTML5: https://developer.mozilla.org/en-US/docs/Web/HTML
+    - CSS3: https://developer.mozilla.org/en-US/docs/Web/CSS
+    - JavaScript ES6+: https://developer.mozilla.org/en-US/docs/Web/JavaScript
+    
+    References:
+    - Async/Await: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function
+    - DOM Manipulation: https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model
+    - CSS Flexbox: https://css-tricks.com/snippets/css/a-guide-to-flexbox/
+    - Form validation: https://developer.mozilla.org/en-US/docs/Learn/Forms/Form_validation
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro-Deadlines</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        input:focus, textarea:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+        
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        button:hover { background: #0056b3; transform: translateY(-1px); }
+        button.ai-button { background: #28a745; font-size: 12px; padding: 6px 12px; margin-top: 8px; }
+        button.ai-button:hover { background: #218838; }
+        button.ai-button:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+        button.delete-button { background: #dc3545; font-size: 12px; padding: 6px 12px; margin-top: 8px; margin-left: 8px; }
+        button.delete-button:hover { background: #c82333; }
+        
+        .assignment-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .task-actions { display: flex; gap: 5px; }
+        .task-delete { background: #6c757d; color: white; border: none; padding: 2px 8px; border-radius: 3px; font-size: 12px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
+        .task-delete:hover { background: #28a745; transform: scale(1.1); }
+        
+        .results { margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; }
+        .assignment { margin: 15px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .assignment h3 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+        .assignment-meta { color: #666; font-size: 14px; margin-bottom: 10px; }
+        
+        .ai-breakdown { 
+            margin-top: 15px; padding: 15px; background: #f0f8ff; border: 1px solid #b8daff; 
+            border-radius: 6px; max-height: 0; overflow: hidden; opacity: 0; 
+            transition: all 0.3s ease-out;
+        }
+        .ai-breakdown.show { 
+            max-height: 500px; opacity: 1; 
+        }
+        .ai-breakdown h4 { margin: 0 0 12px 0; color: #0066cc; font-size: 16px; }
+        .task-item { padding: 10px; margin: 8px 0; background: white; border-radius: 4px; border-left: 4px solid #28a745; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+        .task-item.completed { opacity: 0.6; border-left-color: #6c757d; }
+        .task-item.completed .task-title { text-decoration: line-through; color: #6c757d; }
+        .task-title { font-weight: 500; color: #333; }
+        .task-time { background: #e9ecef; padding: 4px 8px; border-radius: 12px; font-size: 12px; color: #666; }
+        .ai-loading { color: #007bff; font-style: italic; }
+        .ai-error { color: #dc3545; }
+        .ai-note { font-size: 12px; color: #6c757d; margin-top: 8px; }
+        
+        .error { color: #dc3545; padding: 10px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 10px 0; }
+        .success { color: #155724; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Micro-Deadlines</h1>
+    <p>A tiny planner for students. Create assignments and track micro-tasks.</p>
+
+    <!-- Create Assignment Form -->
+    <div>
+        <h2>Create Assignment</h2>
+        <form id="assignmentForm">
+            <div class="form-group">
+                <label for="title">Assignment Title *</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="dueDate">Due Date *</label>
+                <input type="datetime-local" id="dueDate" name="dueDate" required>
+            </div>
+            <div class="form-group">
+                <label for="courseId">Course ID (optional)</label>
+                <input type="text" id="courseId" name="courseId">
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes (optional)</label>
+                <textarea id="notes" name="notes" rows="3"></textarea>
+            </div>
+            <button type="submit">Create Assignment</button>
+        </form>
+    </div>
+
+    <!-- Results Display -->
+    <div class="results">
+        <h2>All Assignments</h2>
+        
+        <!-- Filter Controls -->
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <button onclick="loadAssignments()">All Assignments</button>
+            <button onclick="loadNext7Days()">Next 7 Days</button>
+            <select id="courseFilter" onchange="filterByCourse()" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                <option value="">All Courses</option>
+            </select>
+        </div>
+        
+        <div id="message"></div>
+        <div id="assignments"></div>
+    </div>
+
+    <script>
+        // Handle form submission
+        document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                title: formData.get('title'),
+                dueDate: formData.get('dueDate'),
+                courseId: formData.get('courseId') || undefined,
+                notes: formData.get('notes') || undefined
+            };
+
+            try {
+                console.log('Submitting assignment:', data);
+                const response = await fetch('/assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                console.log('Form submit response status:', response.status);
+                
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('Form submit error response:', text);
+                    showMessage('Error: HTTP ' + response.status, 'error');
+                    return;
+                }
+
+                const result = await response.json();
+                console.log('Form submit result:', result);
+                showMessage('Assignment created successfully!', 'success');
+                e.target.reset();
+                loadAssignments();
+            } catch (error) {
+                console.error('Form submit error:', error);
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        });
+
+        // Load assignments
+        async function loadAssignments(next7 = false) {
+            try {
+                const url = next7 ? '/assignments?next7=1' : '/assignments';
+                console.log('Fetching from URL:', url);
+                
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('Expected JSON but got:', contentType, 'Content:', text.substring(0, 200));
+                    throw new Error('Server returned HTML instead of JSON. Check server logs.');
+                }
+                
+                const assignments = await response.json();
+                console.log('Successfully loaded assignments:', assignments);
+                
+                displayAssignments(assignments);
+                updateCourseFilter(assignments);
+            } catch (error) {
+                console.error('Load assignments error:', error);
+                showMessage('Error loading assignments: ' + error.message, 'error');
+            }
+        }
+
+        // Load next 7 days
+        function loadNext7Days() {
+            loadAssignments(true);
+        }
+
+        // Display assignments
+        function displayAssignments(assignments) {
+            const container = document.getElementById('assignments');
+            console.log('Displaying assignments:', assignments);
+            
+            if (assignments.length === 0) {
+                container.innerHTML = '<p>No assignments found.</p>';
+                return;
+            }
+
+            let html = '';
+            assignments.forEach(assignment => {
+                console.log('Processing assignment:', assignment.title);
+                
+                const dueDate = new Date(assignment.dueDate);
+                const now = new Date();
+                const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
+                const dueDateText = daysUntil > 0 ? daysUntil + ' days' : daysUntil === 0 ? 'Today' : Math.abs(daysUntil) + ' days overdue';
+                
+                const title = assignment.title || 'Untitled';
+                const course = assignment.courseId || '';
+                const notes = assignment.notes || '';
+                
+                html += '<div class="assignment" id="assignment-' + assignment._id + '" data-course="' + course + '">';
+                html += '<h3>' + title + '</h3>';
+                html += '<div class="assignment-meta">';
+                html += '<p><strong>Due:</strong> ' + dueDate.toLocaleDateString() + ' at ' + dueDate.toLocaleTimeString() + ' <em>(' + dueDateText + ')</em></p>';
+                if (course) {
+                    html += '<p><strong>Course:</strong> ' + course + '</p>';
+                }
+                if (notes) {
+                    html += '<p><strong>Notes:</strong> ' + notes + '</p>';
+                }
+                html += '</div>';
+                html += '<div class="assignment-actions">';
+                html += '<button class="ai-button" onclick="toggleBreakdown(\'' + assignment._id + '\')" id="btn-' + assignment._id + '">Get AI Task Breakdown</button>';
+                html += '<button class="delete-button" onclick="deleteAssignment(\'' + assignment._id + '\', \'' + title.replace(/'/g, "\\'") + '\')">Delete Assignment</button>';
+                html += '</div>';
+                html += '<div class="ai-breakdown" id="breakdown-' + assignment._id + '"></div>';
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Toggle AI Breakdown display
+        async function toggleBreakdown(assignmentId) {
+            const button = document.getElementById('btn-' + assignmentId);
+            const breakdownDiv = document.getElementById('breakdown-' + assignmentId);
+            
+            if (breakdownDiv.classList.contains('show') && breakdownDiv.innerHTML.includes('Suggested Micro-Tasks')) {
+                breakdownDiv.classList.remove('show');
+                button.innerHTML = 'Show Task Breakdown';
+                button.style.background = '#007bff';
+                return;
+            }
+            
+            if (breakdownDiv.innerHTML.includes('Suggested Micro-Tasks')) {
+                breakdownDiv.classList.add('show');
+                button.innerHTML = 'Hide Task Breakdown';
+                button.style.background = '#6c757d';
+                return;
+            }
+            
+            await suggestBreakdown(assignmentId);
+        }
+
+        // AI Breakdown suggestion
+        async function suggestBreakdown(assignmentId) {
+            const button = document.getElementById('btn-' + assignmentId);
+            const breakdownDiv = document.getElementById('breakdown-' + assignmentId);
+            
+            button.disabled = true;
+            button.innerHTML = 'Getting AI suggestions...';
+            breakdownDiv.innerHTML = '<div class="ai-loading">AI is analyzing your assignment and generating micro-tasks...</div>';
+            breakdownDiv.classList.add('show');
+            
+            try {
+                const response = await fetch('/assignments/' + assignmentId + '/breakdown/suggest', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (response.ok && result.tasks) {
+                    const totalMins = result.tasks.reduce((sum, task) => sum + (task.etaMins || 0), 0);
+                    const hours = Math.floor(totalMins / 60);
+                    const mins = totalMins % 60;
+                    const timeText = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+                    
+                    let html = '<h4>Suggested Micro-Tasks</h4>';
+                    html += '<div id="total-time-' + assignmentId + '" style="margin-bottom: 10px;"><strong>Total estimated time:</strong> <span id="time-display-' + assignmentId + '">' + timeText + '</span> <span id="remaining-display-' + assignmentId + '" style="color: #28a745; font-weight: bold;"></span></div>';
+                    
+                    result.tasks.forEach((task, index) => {
+                        html += '<div class="task-item" id="task-' + assignmentId + '-' + index + '" data-task-title="' + task.title.replace(/"/g, '&quot;') + '" data-eta-mins="' + task.etaMins + '">';
+                        html += '<div><span class="task-title">' + (index + 1) + '. ' + task.title + '</span></div>';
+                        html += '<div class="task-actions">';
+                        html += '<div class="task-time">' + task.etaMins + 'min</div>';
+                        html += '<button class="task-delete" onclick="toggleTaskComplete(\'' + assignmentId + '\', ' + index + ')">✓</button>';
+                        html += '</div></div>';
+                    });
+                    
+                    // Store tasks data for later saving
+                    window['tasks_' + assignmentId] = result.tasks;
+                    
+                    html += '<div style="margin-top: 15px;">';
+                    html += '<button class="ai-button" onclick="saveTasks(\'' + assignmentId + '\')">Save Tasks to Database</button>';
+                    html += '</div>';
+                    
+                    if (result.cached) {
+                        html += '<div class="ai-note">Loaded from cache (generated ' + new Date(result.generatedAt).toLocaleString() + ')</div>';
+                    } else if (result.aiGenerated) {
+                        html += '<div class="ai-note">Generated by AI based on your assignment details</div>';
+                    } else if (result.note) {
+                        html += '<div class="ai-note">' + result.note + '</div>';
+                    } else if (result.error) {
+                        html += '<div class="ai-error">Warning: ' + result.error + '</div>';
+                    }
+                    
+                    breakdownDiv.innerHTML = html;
+                    button.innerHTML = 'Hide Task Breakdown';
+                    button.style.background = '#6c757d';
+                    button.disabled = false;
+                    
+                } else {
+                    breakdownDiv.innerHTML = '<div class="ai-error">Error: ' + (result.error || 'Failed to generate breakdown') + '</div>';
+                    button.innerHTML = 'Try Again';
+                    button.style.background = '#dc3545';
+                    button.disabled = false;
+                }
+            } catch (error) {
+                breakdownDiv.innerHTML = '<div class="ai-error">Network error: ' + error.message + '</div>';
+                button.innerHTML = 'Try Again';
+                button.style.background = '#dc3545';
+                button.disabled = false;
+            }
+        }
+
+        // Delete assignment
+        async function deleteAssignment(assignmentId, title) {
+            if (!confirm('Are you sure you want to delete "' + title + '"? This will also delete all associated tasks.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/assignments/' + assignmentId, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage('Assignment "' + title + '" deleted successfully', 'success');
+                    loadAssignments();
+                } else {
+                    showMessage('Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        }
+        
+        // Toggle task completion (strikethrough)
+        function toggleTaskComplete(assignmentId, taskIndex) {
+            const taskElement = document.getElementById('task-' + assignmentId + '-' + taskIndex);
+            if (!taskElement) return;
+            
+            const titleSpan = taskElement.querySelector('.task-title');
+            const button = taskElement.querySelector('.task-delete');
+            
+            if (taskElement.classList.contains('completed')) {
+                // Mark as incomplete
+                taskElement.classList.remove('completed');
+                taskElement.style.textDecoration = 'none';
+                taskElement.style.opacity = '1';
+                titleSpan.style.textDecoration = 'none';
+                button.textContent = '✓';
+                button.style.background = '#6c757d';
+            } else {
+                // Mark as complete
+                taskElement.classList.add('completed');
+                taskElement.style.textDecoration = 'line-through';
+                taskElement.style.opacity = '0.6';
+                titleSpan.style.textDecoration = 'line-through';
+                button.textContent = '↺';
+                button.style.background = '#28a745';
+            }
+            
+            // Update remaining time calculation
+            updateRemainingTime(assignmentId);
+        }
+        
+        // Update remaining time display
+        function updateRemainingTime(assignmentId) {
+            const breakdownDiv = document.getElementById('breakdown-' + assignmentId);
+            if (!breakdownDiv) return;
+            
+            const allTasks = breakdownDiv.querySelectorAll('.task-item');
+            let totalMins = 0;
+            let completedMins = 0;
+            
+            allTasks.forEach(task => {
+                const etaMins = parseInt(task.getAttribute('data-eta-mins')) || 0;
+                totalMins += etaMins;
+                
+                if (task.classList.contains('completed')) {
+                    completedMins += etaMins;
+                }
+            });
+            
+            const remainingMins = totalMins - completedMins;
+            const hours = Math.floor(remainingMins / 60);
+            const mins = remainingMins % 60;
+            const timeText = hours > 0 ? hours + 'h ' + mins + 'm' : mins + 'm';
+            
+            const totalHours = Math.floor(totalMins / 60);
+            const totalMinsRemainder = totalMins % 60;
+            const totalTimeText = totalHours > 0 ? totalHours + 'h ' + totalMinsRemainder + 'm' : totalMinsRemainder + 'm';
+            
+            // Update display
+            const timeDisplay = document.getElementById('time-display-' + assignmentId);
+            const remainingDisplay = document.getElementById('remaining-display-' + assignmentId);
+            
+            if (timeDisplay) {
+                timeDisplay.textContent = totalTimeText;
+            }
+            
+            if (remainingDisplay) {
+                if (completedMins > 0) {
+                    remainingDisplay.textContent = '(Remaining: ' + timeText + ')';
+                } else {
+                    remainingDisplay.textContent = '';
+                }
+            }
+        }
+        
+        // Save tasks to database
+        async function saveTasks(assignmentId) {
+            const tasks = window['tasks_' + assignmentId];
+            if (!tasks || tasks.length === 0) {
+                showMessage('No tasks to save', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/assignments/' + assignmentId + '/breakdown/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tasks: tasks })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage('Tasks saved successfully!', 'success');
+                    
+                    // Disable the save button
+                    const breakdownDiv = document.getElementById('breakdown-' + assignmentId);
+                    const saveBtn = breakdownDiv.querySelector('button[onclick*="saveTasks"]');
+                    if (saveBtn) {
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = 'Tasks Saved ✓';
+                        saveBtn.style.background = '#28a745';
+                    }
+                } else {
+                    showMessage('Error saving tasks: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        }
+        
+        // Old delete task function (keeping for compatibility)
+        function deleteTask(assignmentId, taskIndex) {
+            toggleTaskComplete(assignmentId, taskIndex);
+        }
+        
+        // Filter by course
+        function filterByCourse() {
+            const selectedCourse = document.getElementById('courseFilter').value;
+            const assignments = document.querySelectorAll('.assignment');
+            
+            assignments.forEach(assignment => {
+                const assignmentCourse = assignment.getAttribute('data-course');
+                if (!selectedCourse || assignmentCourse === selectedCourse) {
+                    assignment.style.display = 'block';
+                } else {
+                    assignment.style.display = 'none';
+                }
+            });
+        }
+        
+        // Update course filter
+        function updateCourseFilter(assignments) {
+            const courseFilter = document.getElementById('courseFilter');
+            const currentSelection = courseFilter.value;
+            
+            const courses = [...new Set(assignments
+                .map(a => a.courseId)
+                .filter(course => course && course.trim() !== '')
+            )].sort();
+            
+            courseFilter.innerHTML = '<option value="">All Courses</option>' + 
+                courses.map(course => 
+                    '<option value="' + course + '"' + (course === currentSelection ? ' selected' : '') + '>' + course + '</option>'
+                ).join('');
+        }
+
+        // Show message
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = type;
+        }
+
+        // Load assignments on page load
+        loadAssignments();
+    </script>
+</body>
+</html>

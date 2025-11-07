@@ -1,3 +1,19 @@
+/**
+ * Micro-Deadlines API Server
+ * Main Express application entry point
+ * 
+ * External Dependencies:
+ * - Express.js: https://expressjs.com/
+ * - Mongoose: https://mongoosejs.com/
+ * - Morgan: https://github.com/expressjs/morgan
+ * - dotenv: https://github.com/motdotla/dotenv
+ * 
+ * References:
+ * - MongoDB Atlas: https://www.mongodb.com/docs/atlas/
+ * - Express middleware: https://expressjs.com/en/guide/using-middleware.html
+ * - Mongoose connection: https://mongoosejs.com/docs/connections.html
+ */
+
 import express from "express";
 import morgan from "morgan";
 import mongoose from "mongoose";
@@ -11,12 +27,13 @@ const app = express();
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
-// DB
-const MONGO_URL = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/microdeadlines";
+// DB - Connect to MongoDB Atlas
+const MONGO_URL = process.env.DSN || process.env.MONGODB_URI || process.env.MONGO_URL || "mongodb://127.0.0.1:27017/microdeadlines";
 mongoose
   .connect(MONGO_URL)
-  .then(() => console.log("Connected to Mongo"))
+  .then(() => console.log("Connected to MongoDB Atlas:", MONGO_URL.includes("mongodb+srv") ? "Atlas" : "local"))
   .catch((err) => console.error("Mongo connection error:", err.message));
 
 // Routes

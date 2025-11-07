@@ -1,3 +1,16 @@
+/**
+ * Task Routes
+ * Handles CRUD operations for individual tasks
+ * 
+ * External Dependencies:
+ * - Express Router: https://expressjs.com/en/guide/routing.html
+ * - Mongoose: https://mongoosejs.com/docs/queries.html
+ * 
+ * References:
+ * - HTTP PATCH method: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/PATCH
+ * - Date queries in MongoDB: https://www.mongodb.com/docs/manual/tutorial/query-documents/
+ */
+
 import { Router } from "express";
 import Task from "../models/Task.js";
 
@@ -31,7 +44,6 @@ r.get("/", async (req, res, next) => {
   }
 });
 
-export default r;
 // POST /tasks → create
 r.post("/", async (req, res, next) => {
   try {
@@ -46,3 +58,5 @@ r.post("/", async (req, res, next) => {
     next(e);
   }
 });
+
+export default r;

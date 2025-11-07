@@ -1,3 +1,16 @@
+/**
+ * Task Model
+ * MongoDB schema for micro-tasks that break down assignments
+ * 
+ * External Dependencies:
+ * - Mongoose: https://mongoosejs.com/docs/guide.html
+ * 
+ * References:
+ * - Mongoose schemas: https://mongoosejs.com/docs/guide.html
+ * - Schema references: https://mongoosejs.com/docs/populate.html
+ * - Enum validation: https://mongoosejs.com/docs/validation.html#built-in-validators
+ */
+
 import mongoose from "mongoose";
 const TaskSchema = new mongoose.Schema(
   {
